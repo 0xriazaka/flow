@@ -6,7 +6,6 @@ import settings from "./functions/settings";
 import reveal from "./functions/reveal";
 import distribute from "./functions/distribute";
 import details from "./functions/details";
-import genSeed from "./functions/genSeed";
 
 export {
   coolerPrice,
@@ -16,6 +15,5 @@ export {
   settings,
   reveal,
   distribute,
-  details,
-  genSeed
+  details
 }
