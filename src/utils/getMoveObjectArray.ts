@@ -13,7 +13,7 @@ export const getMoveObjectArray = (type: string, jsonContent: any) => {
     const packageId = getPacakgeId();
     const client = getClient();
 
-    // find the object that has the type "published"
+    // find the object that has the type
     function objectType(object: any) {
       return object.objectType == `${packageId}${type}`;
     };
@@ -22,24 +22,38 @@ export const getMoveObjectArray = (type: string, jsonContent: any) => {
         const objects = jsonContent?.objectChanges?.filter(objectType);
         const objectIds = objects.map((object: any) => object.objectId);
 
-        const moveObjects = [];
+        // const moveObjects = [];
 
-        for (let i = 0; i < objectIds.length; i++) {
-          const element = objectIds[i];
+        const moveObjects = await client.multiGetObjects({
+          ids: objectIds,
+          options: {
+            showContent: true
+          },
+        });
+
+        // for (let i = 0; i < objectIds.length; i++) {
+        //   const element = objectIds[i];
           
-          const tx = new Transaction();
+        //   console.log("element", element);
 
-          tx.setGasBudget(config.gasBudgetAmount);
+        //   // const tx = new Transaction();
 
-          const moveObject = await client.getObject({
-            id: element,
-            options: {
-              showContent: true
-            },
-          });
+        //   // tx.setGasBudget(config.gasBudgetAmount);
 
-          moveObjects.push(moveObject);
-        }
+        //   const moveObject = await client.getObject({
+        //     id: element,
+        //     options: {
+        //       showContent: true
+        //     },
+        //   });
+
+        //   console.log("moveObject", moveObject);
+          
+
+        //   moveObjects.push(moveObject);
+        // }
+
+        console.log("moveObjects", moveObjects);
 
         resolve(moveObjects);
     } catch (error) {

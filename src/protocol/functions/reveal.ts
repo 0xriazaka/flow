@@ -19,6 +19,7 @@ import {
   CAPSULE_IDS,
   REVEAL,
   BUY,
+  INIT,
   INIT_OBJECTS
  } from "../../constants";
 import { buyObjectInterface } from '../../interface/buyObjectInterface';
@@ -40,19 +41,41 @@ export default async () => {
   console.log("Revealing NFTs");
 
   const buyObject = await readFile(`${config.network}_${BUY}`) as buyObjectInterface;
-  const initObject = await readFile(`${config.network}_${INIT_OBJECTS}`) as InitObjectInterface;
+  // const initObject = await readFile(`${config.network}_${INIT_OBJECTS}`) as InitObjectInterface;
+  const initObject = await readFile(`${config.network}_${INIT}`) as any;
   const keypair = getKeypair();
   const client = getClient();
   const packageId = getPacakgeId();
 
+  const CapsuleObjects = await client.multiGetObjects({
+    ids: initObject[CAPSULE_IDS],
+    options: {
+      showContent: true
+    },
+  });  
 
   let revealObject = [];
 
+  // We use this object to insure that the transaction has been comeplete
+  // and the sequncer versioning is up to date before running the next transaction
+  let txResponse = {
+    digest: ''
+  };
+
   for (let i = 0; i < data.metadata.length; i++) {
+
+
+    if(txResponse?.digest as string != '') {
+      await client.waitForTransaction({
+        digest: txResponse.digest,
+        options: { showObjectChanges: true }
+      });
+    }
+
     console.log(`Revealing NFT #${i + 1}`);
     const nftData = data.metadata[i];    
 
-    let nftMoveObject = findNFT(initObject[CAPSULE_IDS], nftData.number);
+    let nftMoveObject = findNFT(CapsuleObjects, nftData.number);
 
     const tx = new Transaction();
 
@@ -98,6 +121,8 @@ export default async () => {
 
     dataObject.number = i + 1;
     dataObject.digest = objectChange?.digest;
+
+    txResponse = objectChange;
 
     revealObject.push(dataObject);
 

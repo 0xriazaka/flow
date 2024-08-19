@@ -80,8 +80,10 @@ export default async () => {
     };
 
     const capsuleIdArrayObjects = await getMoveObjectArray(CAPSULE, objectChange);
-    initObjects[CAPSULE_IDS] = capsuleIdArrayObjects as any[];
+    
+    initObjects[CAPSULE_IDS] = capsuleIdArrayObjects as [any];
     initObjects[DIGEST] = objectChange?.digest;
+
     await writeFile(`${config.network}_${INIT_OBJECTS}`, initObjects);
     
     
