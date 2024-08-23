@@ -3,6 +3,7 @@ import 'dotenv/config';
 
 // Packages imports
 import { Transaction } from '@mysten/sui/transactions';
+import _ from 'lodash';
 
 // Local imports
 import config from "../../../config.json";
@@ -11,7 +12,6 @@ import { getClient, getKeypair } from "../../utils/suiUtils";
 import { getPacakgeId } from "../../utils/waterCooler";
 import { writeFile, readFile } from "../../utils/fileUtils";
 import { 
-  MINT_ADMIN_CAP_ID,
   WATER_COOLER_ADMIN_ID,
   WATER_COOLER_ID,
   COLLECTION_ID,
@@ -20,10 +20,8 @@ import {
   REVEAL,
   BUY,
   INIT,
-  INIT_OBJECTS
  } from "../../constants";
 import { buyObjectInterface } from '../../interface/buyObjectInterface';
-import {InitObjectInterface} from "../../interface/initObjectInterface";
 
 function findNFT(objectsResponse: any[], number: number) {
   for (const nftObject of objectsResponse) {
@@ -47,12 +45,24 @@ export default async () => {
   const client = getClient();
   const packageId = getPacakgeId();
 
-  const CapsuleObjects = await client.multiGetObjects({
-    ids: initObject[CAPSULE_IDS],
-    options: {
-      showContent: true
-    },
-  });  
+  // Convert the capsule ID array into chucks to retrive the objects
+  // as the multiGetObjects function is limited to 50 objects
+  const chunckedCapsuleIDArray = _.chunk(initObject[CAPSULE_IDS], 50);
+
+
+  let CapsuleObjects: any = [];
+
+  // Retrieve the Capsule objects and store them in an array
+  for (let i = 0; i < chunckedCapsuleIDArray.length; i++) {
+    const chuckCapsuleObjects = await client.multiGetObjects({
+      ids: chunckedCapsuleIDArray[i] as any[],
+      options: {
+        showContent: true
+      },
+    });
+
+    CapsuleObjects = CapsuleObjects.concat(chuckCapsuleObjects);
+  }
 
   let revealObject = [];
 
@@ -64,7 +74,8 @@ export default async () => {
 
   for (let i = 0; i < data.metadata.length; i++) {
 
-
+// This is to make sure that we wait until the previous transaction is complete
+// before starting the next one
     if(txResponse?.digest as string != '') {
       await client.waitForTransaction({
         digest: txResponse.digest,

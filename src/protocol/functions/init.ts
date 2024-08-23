@@ -11,7 +11,6 @@ import config from "../../../config.json";
 import { getClient, getKeypair } from "../../utils/suiUtils";
 import { getPacakgeId } from "../../utils/waterCooler";
 import { writeFile, readFile } from "../../utils/fileUtils";
-import { getMoveObjectArray } from "../../utils/getMoveObjectArray";
 import { getObjectIdArrayFromObject } from "../../utils/getObjectIdArray";
 import { 
   WATER_COOLER_ID,
@@ -20,7 +19,6 @@ import {
   COLLECTION_ID,
   DIGEST,
   INIT,
-  INIT_OBJECTS,
   BUY,
   CAPSULE,
   CAPSULE_IDS
@@ -72,25 +70,13 @@ export default async () => {
       options: {
         showObjectChanges: true
       },
-    });
-
-    let initObjects: InitObjectInterface = {
-      CapsuleIDs: [{}],
-      digest: "",
-    };
-
-    const capsuleIdArrayObjects = await getMoveObjectArray(CAPSULE, objectChange);
-    
-    initObjects[CAPSULE_IDS] = capsuleIdArrayObjects as [any];
-    initObjects[DIGEST] = objectChange?.digest;
-
-    await writeFile(`${config.network}_${INIT_OBJECTS}`, initObjects);
-    
+    });    
     
     let initObjectIds: InitObjectInterface = {
       CapsuleIDs: [{}],
       digest: "",
     };
+
     const mizuNFTIdArray = await getObjectIdArrayFromObject(CAPSULE, objectChange);
     initObjectIds[CAPSULE_IDS] = mizuNFTIdArray as [any];
     initObjectIds[DIGEST] = objectChange?.digest;
@@ -105,6 +91,8 @@ export default async () => {
     console.log(output)
 
   } catch (error: any) {
+    console.log("The error:", error);
+    
     console.log("Error initilising the water cooler.");
   }
 
