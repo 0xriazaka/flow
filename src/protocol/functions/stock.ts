@@ -1,11 +1,9 @@
 // Dependence
 import 'dotenv/config';
 
-// Node imports
-import fs from 'node:fs';
-
 // Packages imports
 import { Transaction } from '@mysten/sui/transactions';
+import _ from 'lodash';
 
 // Local imports
 import config from "../../../config.json";
@@ -32,30 +30,42 @@ export default async () => {
   const client = getClient();
 
   const packageId = getPacakgeId();
-  const tx = new Transaction();
 
-  tx.setGasBudget(config.gasBudgetAmount);
-  tx.moveCall({
-    target: `${packageId}::orchestrator::stock_warehouse`,
-    arguments: [
-      tx.object(buyObject[MINT_ADMIN_CAP_ID]),
-      tx.object(buyObject[WATER_COOLER_ID]),
-      tx.makeMoveVec({ elements: initObject[CAPSULE_IDS] }),
-      tx.object(buyObject[MINT_WAREHOUSE_ID]),
-    ]
-  });
 
-  const objectChange = await client.signAndExecuteTransaction({
-    signer: keypair,
-    transaction: tx,
-    options: {
-      showObjectChanges: true
-    }
-  });
+  let stockObject: any[] = [];
 
-  let stockObject: {digest: any} = {digest: ""};
+  const chunckedCapsuleIDArray = _.chunk(initObject[CAPSULE_IDS], 500);
 
-  stockObject[DIGEST] = objectChange?.digest;
+
+  // To Do: find a way to keep track of the NFTs that have already been added to the warehouse
+  // This is to avoid trying to add NFTs that have already been added in the event of the function stoping
+  // add a check point so we can pickup where we left off
+  for (let i = 0; i < chunckedCapsuleIDArray.length; i++) {
+    console.log(`batch: ${i + 1} completed`);
+
+    const tx = new Transaction();
+
+    tx.setGasBudget(config.stockGasBudget);
+    tx.moveCall({
+      target: `${packageId}::orchestrator::stock_warehouse`,
+      arguments: [
+        tx.object(buyObject[MINT_ADMIN_CAP_ID]),
+        tx.object(buyObject[WATER_COOLER_ID]),
+        tx.makeMoveVec({ elements: chunckedCapsuleIDArray[i] }),
+        tx.object(buyObject[MINT_WAREHOUSE_ID]),
+      ]
+    });
+
+    const objectChange = await client.signAndExecuteTransaction({
+      signer: keypair,
+      transaction: tx,
+      options: {
+        showObjectChanges: true
+      }
+    });
+
+    stockObject.push(objectChange?.digest);
+  }
 
   await writeFile(`${config.network}_${STOCK}`, stockObject);
 

@@ -22,6 +22,7 @@
     "boxen": "^7.1.1",
     "commander": "^12.0.0",
     "dotenv": "^16.4.5",
+    "glob": "^11.0.0",
     "inquirer": "^8.2.6"
   },
   "devDependencies": {

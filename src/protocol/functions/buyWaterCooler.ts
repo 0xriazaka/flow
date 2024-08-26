@@ -68,7 +68,7 @@ export default async () => {
     const packageId = getPacakgeId();
     const tx = new Transaction();
 
-    tx.setGasBudget(config.gasBudgetAmount);
+    tx.setGasBudget(config.buyGasBudget);
 
     const [coin] = tx.splitCoins(tx.gas, [price]);
     const coolerFactoryId = getCoolerFactoryId();

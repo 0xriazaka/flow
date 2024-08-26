@@ -11,6 +11,7 @@ import data from "../../../assets/metadata.json";
 import { getClient, getKeypair } from "../../utils/suiUtils";
 import { getPacakgeId } from "../../utils/waterCooler";
 import { writeFile, readFile } from "../../utils/fileUtils";
+import { getMetadata } from "../../utils/getMetadata";
 import { 
   WATER_COOLER_ADMIN_ID,
   WATER_COOLER_ID,
@@ -39,7 +40,6 @@ export default async () => {
   console.log("Revealing NFTs");
 
   const buyObject = await readFile(`${config.network}_${BUY}`) as buyObjectInterface;
-  // const initObject = await readFile(`${config.network}_${INIT_OBJECTS}`) as InitObjectInterface;
   const initObject = await readFile(`${config.network}_${INIT}`) as any;
   const keypair = getKeypair();
   const client = getClient();
@@ -49,8 +49,9 @@ export default async () => {
   // as the multiGetObjects function is limited to 50 objects
   const chunckedCapsuleIDArray = _.chunk(initObject[CAPSULE_IDS], 50);
 
-
   let CapsuleObjects: any = [];
+
+  console.log("Retrieving objects");
 
   // Retrieve the Capsule objects and store them in an array
   for (let i = 0; i < chunckedCapsuleIDArray.length; i++) {
@@ -72,10 +73,26 @@ export default async () => {
     digest: ''
   };
 
+  console.log("Objects retrieved");
+
+
+
+
+  // This section is to get the metadata from the files
+  // To Do: Find a way to store the files on chain
+  // const attributes = await getMetadata("attributes");
+  // const images = await getMetadata("images");
+
+  // console.log("attributes", attributes);
+  // console.log("images", images);
+
+  
+
+
   for (let i = 0; i < data.metadata.length; i++) {
 
-// This is to make sure that we wait until the previous transaction is complete
-// before starting the next one
+  // This is to make sure that we wait until the previous transaction is complete
+  // before starting the next one
     if(txResponse?.digest as string != '') {
       await client.waitForTransaction({
         digest: txResponse.digest,
@@ -98,7 +115,7 @@ export default async () => {
 
     let dataObject: {number: number | null, digest: string | null} = {number:null, digest: null};
 
-    tx.setGasBudget(config.gasBudgetAmount);
+    tx.setGasBudget(config.revealGasBudget);
 
     const keys = tx.makeMoveVec({
       type: `0x1::string::String`,
