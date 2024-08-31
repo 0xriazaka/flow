@@ -1,17 +1,20 @@
 {
-    "gasBudgetAmount": 1000000000,
-    "network": "testnet",
+    "buyGasBudget": 2000000000,
+    "gasBudgetAmount": 12000000000,
+    "stockGasBudget": 5000000000,
+    "revealGasBudget": 1000000000,
+    "network": "devnet",
     "devnet": {
-        "packageId": "",
-        "coolerFactoryId": "",
-        "factorySettingsId": "",
-        "transferPolicyId": ""
+        "packageId": "0x5052f7376ac1172e611ce54046119be08bafd38dd2b99195ab81bb5fc39747ce",
+        "coolerFactoryId": "0x2fcee303953d07d417569a44158abc4721542fe4c36e7e278b9202b7447f2cbf",
+        "factorySettingsId": "0xc68f5e17246df631e0763ce9cac8b58b497a0dc10b0f635a437fb375955a471d",
+        "transferPolicyId": "0xe4b5fd5c9104944c85987118313f8318df5e28b690cceb264c40bf77a58c80e1"
     },
     "testnet": {
-        "packageId": "0x4f1868973f642f8960a3d2e564dcc500bd446a5d0421b64e7595f3fde88b3e48",
-        "coolerFactoryId": "0x41780591771accdd8c7710707459710e322aedc6a4ecd037e718d5e5d32ee3c6",
-        "factorySettingsId": "0xbe98bf94821688c817ffe48d7dfeb2b28baade88ed1a93ca34e617b6f26b276b",
-        "transferPolicyId": "0x9e4d4eb145ac90fae9bf46d6c7210d282445c9b648461fe218f07a8ba55f04d6"
+        "packageId": "0x62a2c19ffddd15efe6679706c55cb80aff3c0fb2500e87795f7269de149f3ff7",
+        "coolerFactoryId": "0x023b23f7dcfe6a509f3f1d712f6d1b11be58ab0d30f4cce8357c458f54fedefb",
+        "factorySettingsId": "0xdc4a9b57be9af67e1dc2703b83dfde217ff9b063c81acbf6daf8f7d9339e9caf",
+        "transferPolicyId": "0x09dcffaad6d8de758147446bd1ea963602170f620666c7ce2904d2e7f47f4948"
     },
     "mainnet": {
         "packageId": "",

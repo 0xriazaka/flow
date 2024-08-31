@@ -3,108 +3,178 @@ import 'dotenv/config';
 
 // Packages imports
 import { Transaction } from '@mysten/sui/transactions';
-import chalk from 'chalk';
-import boxen from 'boxen';
+import _ from 'lodash';
 
 // Local imports
 import config from "../../../config.json";
+import data from "../../../assets/metadata.json";
 import { getClient, getKeypair } from "../../utils/suiUtils";
 import { getPacakgeId } from "../../utils/waterCooler";
 import { writeFile, readFile } from "../../utils/fileUtils";
-import { getMoveObjectArray } from "../../utils/getMoveObjectArray";
 import { getObjectIdArrayFromObject } from "../../utils/getObjectIdArray";
+import { getMetadata } from "../../utils/getMetadata";
 import { 
-  WATER_COOLER_ID,
   WATER_COOLER_ADMIN_ID,
-  REGISTRY_ID,
+  WATER_COOLER_ID,
   COLLECTION_ID,
-  DIGEST,
-  INIT,
-  INIT_OBJECTS,
-  BUY,
+  REGISTRY_ID,
+  CAPSULE_IDS,
   CAPSULE,
-  CAPSULE_IDS
+  REVEAL,
+  BUY,
+  INIT,
  } from "../../constants";
 import { buyObjectInterface } from '../../interface/buyObjectInterface';
-import {InitObjectInterface} from "../../interface/initObjectInterface";
+
+function findNFT(objectsResponse: any[], number: number) {
+  for (const nftObject of objectsResponse) {
+    if ('data' in nftObject && nftObject.data && 'content' in nftObject.data && nftObject.data.content && 'fields' in nftObject.data.content) {
+      const objectNumber = parseInt(nftObject.data.content.fields.number);
+      if (objectNumber === number) {
+        return nftObject;
+      }
+    }
+  }
+  return null;
+}
 
 export default async () => {
-  console.log("Initiate Water Cooler");
-
-
+  console.log("Revealing NFTs (Batched)");
 
   const buyObject = await readFile(`${config.network}_${BUY}`) as buyObjectInterface;
   const keypair = getKeypair();
   const client = getClient();
   const packageId = getPacakgeId();
-  const tx = new Transaction();
 
-  tx.setGasBudget(config.gasBudgetAmount);
+  let initObjects: any = {
+    CapsuleIDs: [],
+    digest: [],
+  };
 
-  const waterColler = await client.getObject({
-    id: buyObject[WATER_COOLER_ID],
-    options: { showContent: true }
-  });
+  // We use this object to insure that the transaction has been comeplete
+  // and the sequncer versioning is up to date before running the next transaction
+  let txResponse = {
+    digest: ''
+  };
 
-  const response = waterColler?.data?.content;
+  console.log("Objects retrieved");
+
+
+  console.log("Sorting Objects");
   
-  if (response && "fields" in response) {
-    if((response as any).fields.is_initialized) {
-      console.error(`${chalk.blue.bold("[Info]")} Your Water Cooler has already been initialized.`);
-      process.exit(1);
+
+  const metaDataChuncks = _.chunk(data.metadata, 250);
+
+
+  // Here we loop over the array of subarrays of metadata that has been arranged
+  for (let i = 0; i < metaDataChuncks.length; i++) {
+
+    // This is to make sure that we wait until the previous transaction is complete
+    // before starting the next one
+    if(txResponse?.digest as string != '') {
+      await client.waitForTransaction({
+        digest: txResponse.digest,
+        options: { showObjectChanges: true }
+      });
     }
-  }
 
-  tx.moveCall({
-    target: `${packageId}::water_cooler::initialize_water_cooler`,
-    arguments: [
-      tx.object(buyObject[WATER_COOLER_ADMIN_ID]),
-      tx.object(buyObject[WATER_COOLER_ID]),
-      tx.object(buyObject[REGISTRY_ID]),
-      tx.object(buyObject[COLLECTION_ID]),
-    ]
-  });
+    console.log(`Initiating NFTs batch #${i + 1}`);
 
-  try {
+    const tx = new Transaction();
+
+    let numberArray: any = [];
+    let keyArray: any = [];
+    let valuesArray: any = [];
+    let imageArray: any = [];
+
+
+
+    // Here we loop over an individual subarray in order to create a transaction
+    for (let j = 0; j < metaDataChuncks[i].length; j++) {
+      const nftData = metaDataChuncks[i][j];
+
+
+      const dataKeys: any[] = Object.keys(nftData.attributes);
+      const dataValues: any[] = Object.values(nftData.attributes);
+
+      let pureKeys = dataKeys.map(key => tx.pure.string(key));
+      let pureValues = dataValues.map(value => tx.pure.string(value));
+
+      const keys = tx.makeMoveVec({
+        type: `0x1::string::String`,
+        elements: pureKeys
+      });
+
+      const values = tx.makeMoveVec({
+        type: `0x1::string::String`,
+        elements: pureValues
+      });
+
+      imageArray.push(tx.pure.string(nftData.image_url));
+      numberArray.push(tx.pure.u64(nftData.number));
+      keyArray.push(keys);
+      valuesArray.push(values);
+
+    }
+
+    const vetorKeys = tx.makeMoveVec({
+      type: `vector<0x1::string::String>`,
+      elements: keyArray
+    });
+
+    const vetorValues = tx.makeMoveVec({
+      type: `vector<0x1::string::String>`,
+      elements: valuesArray
+    });
+
+    const vectorNumbers = tx.makeMoveVec({
+      type: `u64`,
+      elements: numberArray
+    });
+    
+    const vectorImages = tx.makeMoveVec({
+      type: `0x1::string::String`,
+      elements: imageArray
+    });
+    
+    tx.setGasBudget(config.revealGasBudget);
+
+    tx.moveCall({
+      target: `${packageId}::water_cooler::initialize_with_data`,
+      arguments: [
+        tx.object(buyObject[WATER_COOLER_ADMIN_ID]),
+        tx.object(buyObject[WATER_COOLER_ID]),
+        tx.object(buyObject[REGISTRY_ID]),
+        tx.object(buyObject[COLLECTION_ID]),
+        vectorNumbers,
+        vectorImages,
+        vetorKeys,
+        vetorValues,
+      ]
+    });
+
+    let dataObject: {number: number | null, digest: string | null} = {number:null, digest: null};
+
     const objectChange = await client.signAndExecuteTransaction({
       signer: keypair,
       transaction: tx,
-      options: {
-        showObjectChanges: true
-      },
+      options: { showObjectChanges: true },
     });
 
-    let initObjects: InitObjectInterface = {
-      CapsuleIDs: [{}],
-      digest: "",
-    };
+    dataObject.number = i + 1;
+    dataObject.digest = objectChange?.digest;
 
-    const capsuleIdArrayObjects = await getMoveObjectArray(CAPSULE, objectChange);
-    initObjects[CAPSULE_IDS] = capsuleIdArrayObjects as any[];
-    initObjects[DIGEST] = objectChange?.digest;
-    await writeFile(`${config.network}_${INIT_OBJECTS}`, initObjects);
-    
-    
-    let initObjectIds: InitObjectInterface = {
-      CapsuleIDs: [{}],
-      digest: "",
-    };
+    txResponse = objectChange;
+
     const mizuNFTIdArray = await getObjectIdArrayFromObject(CAPSULE, objectChange);
-    initObjectIds[CAPSULE_IDS] = mizuNFTIdArray as [any];
-    initObjectIds[DIGEST] = objectChange?.digest;
-    await writeFile(`${config.network}_${INIT}`, initObjectIds);
+    initObjects[CAPSULE_IDS] = initObjects[CAPSULE_IDS].concat(mizuNFTIdArray);
 
-    const titleMessage = "Water Cooler Initilized"
-    const output = boxen(
-        `${chalk.bold('Congratulation:')} ${chalk.green('Your Water Cooler has been initilized')}\n\n${chalk.bold('The NFTs for your collection has been created.')}`,
-        { title: titleMessage, padding: 1, margin: 1, borderStyle: 'double' }
-    );
+    initObjects.digest.push(dataObject);
 
-    console.log(output)
-
-  } catch (error: any) {
-    console.log("Error initilising the water cooler.");
+    console.log(`NFT batch #${i + 1} has been initiated`);
   }
 
+  await writeFile(`${config.network}_${INIT}`, initObjects);
 
+  console.log("NFT reveal complete.");
 }

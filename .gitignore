@@ -1,5 +1,7 @@
 node_modules
 assets/attributes/*
+assets/metadata/images/*
+assets/metadata/attributes/*
 assets/images/*
 assets/og_test.json
 assets/wl_test.json

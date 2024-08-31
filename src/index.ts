@@ -67,9 +67,9 @@ program.command('stock')
   .description('Stock NFTs in Water Cooler warehouse in preperation for mint')
   .action(stock);
 
-  program.command('reveal')
-  .description('Reveal the NFT images and attributes')
-  .action(reveal);
+// program.command('reveal')
+//   .description('Reveal the NFT images and attributes')
+//   .action(reveal);
 
 program.command('set')
   .description('Change setting on your Water Cooler')

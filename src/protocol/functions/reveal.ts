@@ -3,6 +3,7 @@ import 'dotenv/config';
 
 // Packages imports
 import { Transaction } from '@mysten/sui/transactions';
+import _ from 'lodash';
 
 // Local imports
 import config from "../../../config.json";
@@ -10,8 +11,8 @@ import data from "../../../assets/metadata.json";
 import { getClient, getKeypair } from "../../utils/suiUtils";
 import { getPacakgeId } from "../../utils/waterCooler";
 import { writeFile, readFile } from "../../utils/fileUtils";
+import { getMetadata } from "../../utils/getMetadata";
 import { 
-  MINT_ADMIN_CAP_ID,
   WATER_COOLER_ADMIN_ID,
   WATER_COOLER_ID,
   COLLECTION_ID,
@@ -19,10 +20,9 @@ import {
   CAPSULE_IDS,
   REVEAL,
   BUY,
-  INIT_OBJECTS
+  INIT,
  } from "../../constants";
 import { buyObjectInterface } from '../../interface/buyObjectInterface';
-import {InitObjectInterface} from "../../interface/initObjectInterface";
 
 function findNFT(objectsResponse: any[], number: number) {
   for (const nftObject of objectsResponse) {
@@ -40,19 +40,70 @@ export default async () => {
   console.log("Revealing NFTs");
 
   const buyObject = await readFile(`${config.network}_${BUY}`) as buyObjectInterface;
-  const initObject = await readFile(`${config.network}_${INIT_OBJECTS}`) as InitObjectInterface;
+  const initObject = await readFile(`${config.network}_${INIT}`) as any;
   const keypair = getKeypair();
   const client = getClient();
   const packageId = getPacakgeId();
 
+  // Convert the capsule ID array into chucks to retrive the objects
+  // as the multiGetObjects function is limited to 50 objects
+  const chunckedCapsuleIDArray = _.chunk(initObject[CAPSULE_IDS], 50);
+
+  let CapsuleObjects: any = [];
+
+  console.log("Retrieving objects");
+
+  // Retrieve the Capsule objects and store them in an array
+  for (let i = 0; i < chunckedCapsuleIDArray.length; i++) {
+    const chuckCapsuleObjects = await client.multiGetObjects({
+      ids: chunckedCapsuleIDArray[i] as any[],
+      options: {
+        showContent: true
+      },
+    });
+
+    CapsuleObjects = CapsuleObjects.concat(chuckCapsuleObjects);
+  }
 
   let revealObject = [];
 
+  // We use this object to insure that the transaction has been comeplete
+  // and the sequncer versioning is up to date before running the next transaction
+  let txResponse = {
+    digest: ''
+  };
+
+  console.log("Objects retrieved");
+
+
+
+
+  // This section is to get the metadata from the files
+  // To Do: Find a way to store the files on chain
+  // const attributes = await getMetadata("attributes");
+  // const images = await getMetadata("images");
+
+  // console.log("attributes", attributes);
+  // console.log("images", images);
+
+  
+
+
   for (let i = 0; i < data.metadata.length; i++) {
+
+  // This is to make sure that we wait until the previous transaction is complete
+  // before starting the next one
+    if(txResponse?.digest as string != '') {
+      await client.waitForTransaction({
+        digest: txResponse.digest,
+        options: { showObjectChanges: true }
+      });
+    }
+
     console.log(`Revealing NFT #${i + 1}`);
     const nftData = data.metadata[i];    
 
-    let nftMoveObject = findNFT(initObject[CAPSULE_IDS], nftData.number);
+    let nftMoveObject = findNFT(CapsuleObjects, nftData.number);
 
     const tx = new Transaction();
 
@@ -64,7 +115,7 @@ export default async () => {
 
     let dataObject: {number: number | null, digest: string | null} = {number:null, digest: null};
 
-    tx.setGasBudget(config.gasBudgetAmount);
+    tx.setGasBudget(config.revealGasBudget);
 
     const keys = tx.makeMoveVec({
       type: `0x1::string::String`,
@@ -98,6 +149,8 @@ export default async () => {
 
     dataObject.number = i + 1;
     dataObject.digest = objectChange?.digest;
+
+    txResponse = objectChange;
 
     revealObject.push(dataObject);
 
