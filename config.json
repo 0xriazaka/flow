@@ -5,10 +5,10 @@
     "revealGasBudget": 1000000000,
     "network": "devnet",
     "devnet": {
-        "packageId": "0x5052f7376ac1172e611ce54046119be08bafd38dd2b99195ab81bb5fc39747ce",
-        "coolerFactoryId": "0x2fcee303953d07d417569a44158abc4721542fe4c36e7e278b9202b7447f2cbf",
-        "factorySettingsId": "0xc68f5e17246df631e0763ce9cac8b58b497a0dc10b0f635a437fb375955a471d",
-        "transferPolicyId": "0xe4b5fd5c9104944c85987118313f8318df5e28b690cceb264c40bf77a58c80e1"
+        "packageId": "0x44154485e073adfb6837bdb6eea7e9e68b4c56ec8d4106179532d8bad1b0c978",
+        "coolerFactoryId": "0x0364b418940351b8ce535b0f853dae0cd0828f1be7eb3e8c5c89623a221468fa",
+        "factorySettingsId": "0xb95a88ea42a74f7e3983b1dd29c486f61ce36ea3b5ef18a1d0d90c95000fedf4",
+        "transferPolicyId": "0xc5ec26c0ca7d3a80e34a6282964028da537545ac4d8154f45b8fceab58064414"
     },
     "testnet": {
         "packageId": "0x62a2c19ffddd15efe6679706c55cb80aff3c0fb2500e87795f7269de149f3ff7",
